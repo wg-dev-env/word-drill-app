@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文章題ドリル印刷 - 開智対策（新5年）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kurenaido&family=Kiwi+Maru:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0eee9;
+    --ink: #1a1a1a;
+    --primary: #2a78d6;
+    --primary-soft: #eaf3fd;
+    --muted: #888;
+    --line: #ccc;
+    --paper: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Zen Kurenaido', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+  .container { max-width: 640px; margin: 0 auto; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* 上部バー */
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px; border-bottom: 1.5px solid var(--ink); background: var(--paper);
+  }
+  .topbar-title { font: 500 17px 'Kiwi Maru', serif; }
+  .topbar-sub { font-size: 11px; color: var(--muted); }
+  .link-btn {
+    color: var(--primary); font-size: 13px; cursor: pointer; background: none;
+    border: none; font-family: inherit; padding: 0;
+  }
+
+  .hero { padding: 22px 18px 4px; }
+  .hero-title { font: 500 26px 'Kiwi Maru', serif; }
+  .hero-sub { font-size: 12.5px; color: #777; margin-top: 4px; }
+
+  /* ステップ表示（ウィザードモードのみ） */
+  .step-chrome { display: none; padding: 16px 18px 0; gap: 8px; align-items: center; }
+  .step-item { flex: 1; display: flex; align-items: center; gap: 7px; }
+  .step-circle {
+    width: 24px; height: 24px; border: 1.5px solid var(--ink); border-radius: 50%;
+    font-size: 12px; text-align: center; line-height: 22px; color: var(--ink); flex: none;
+  }
+  .step-circle.done { background: var(--ink); color: #fff; }
+  .step-circle.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .step-label { font-size: 12px; color: #999; }
+  .step-label.active { color: var(--ink); }
+  .progress-bar { display: none; margin: 14px 18px 0; height: 5px; background: #eee; border-radius: 3px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width .2s; }
+
+  /* 設定項目 */
+  .settings { padding: 20px 18px 0; display: flex; flex-direction: column; gap: 20px; }
+  .setting-group { display: flex; flex-direction: column; gap: 18px; }
+  .field-label {
+    font-size: 12px; color: var(--muted); margin-bottom: 7px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+
+  .segmented { display: flex; border: 1.5px solid var(--ink); border-radius: 10px; overflow: hidden; }
+  .segmented button {
+    flex: 1; padding: 11px 0; text-align: center; font-size: 15px; background: var(--paper);
+    border: none; border-left: 1.5px solid var(--ink); color: var(--ink); cursor: pointer; font-family: inherit;
+  }
+  .segmented button:first-child { border-left: none; }
+  .segmented button.selected { background: var(--primary); color: #fff; }
+
+  .unit-panel { border: 1.5px solid var(--ink); border-radius: 12px; overflow: hidden; background: var(--paper); }
+  .pill-btn {
+    font-size: 11.5px; border: 1px dashed var(--primary); color: var(--primary);
+    border-radius: 20px; padding: 2px 9px; cursor: pointer; background: none; font-family: inherit;
+  }
+  .pill-btn.muted { border-color: #aaa; color: #777; }
+  .check-row {
+    display: flex; gap: 10px; align-items: center; padding: 12px 13px;
+    border-bottom: 1px dashed var(--line); cursor: pointer;
+  }
+  .check-row:last-child { border-bottom: none; }
+  .checkbox {
+    width: 19px; height: 19px; border: 1.5px solid var(--ink); border-radius: 5px; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff;
+  }
+  .checkbox.checked { background: var(--ink); }
+  .check-text { font-size: 14.5px; }
+  .check-sub { font-size: 11px; color: var(--muted); }
+  .toggle-desc { font-size: 11px; color: var(--muted); }
+
+  .switch {
+    width: 44px; height: 26px; border: 1.5px solid var(--ink); border-radius: 20px;
+    position: relative; flex: none; background: #e8e6e1; margin-left: auto;
+  }
+  .switch.on { background: var(--primary); }
+  .switch-knob {
+    position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+    border: 1.5px solid var(--ink); border-radius: 50%; background: #fff;
+  }
+  .switch.on .switch-knob { left: auto; right: 2px; }
+
+  .stepper-row {
+    display: flex; justify-content: space-between; align-items: center;
+    border: 1.5px solid var(--ink); border-radius: 12px; padding: 11px 13px; background: var(--paper);
+  }
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepper button {
+    width: 30px; height: 30px; border: 1.5px solid var(--ink); border-radius: 8px;
+    background: var(--paper); font-size: 16px; cursor: pointer; font-family: inherit;
+  }
+  .stepper-val { font-size: 17px; width: 26px; text-align: center; }
+
+  .answer-select { display: flex; border: 1.5px solid var(--ink); border-radius: 10px; overflow: hidden; }
+  .answer-select button {
+    flex: 1; padding: 10px 0; font-size: 13.5px; background: var(--paper);
+    border: none; border-left: 1.5px solid var(--ink); cursor: pointer; font-family: inherit;
+  }
+  .answer-select button:first-child { border-left: none; }
+  .answer-select button.selected { background: var(--primary); color: #fff; }
+
+  /* ウィザードナビ */
+  .wizard-nav {
+    display: none; gap: 14px; padding: 18px; margin-top: 14px;
+    border-top: 1.5px dashed var(--ink); background: #faf9f6;
+  }
+  .wizard-nav button { font-family: inherit; cursor: pointer; font-size: 15px; border-radius: 12px; }
+  .btn-back { border: 1.5px solid var(--ink); background: var(--paper); padding: 14px 22px; }
+  .btn-next { flex: 1; background: var(--primary); color: #fff; border: 1.5px solid var(--ink); padding: 14px 0; }
+
+  /* 1枚スクロール時の送信ボタン */
+  .sticky-submit {
+    display: none; margin-top: 14px; padding: 14px 18px;
+    border-top: 1.5px dashed var(--ink); background: #faf9f6; position: sticky; bottom: 0;
+  }
+  .sticky-submit button {
+    width: 100%; background: var(--primary); color: #fff; border: 1.5px solid var(--ink);
+    border-radius: 12px; padding: 15px 0; font-size: 17px; cursor: pointer; font-family: inherit;
+  }
+
+  /* レスポンシブ切り替え: 768px未満=ウィザード / 768px以上=1枚スクロール */
+  body[data-mode="wizard"] .setting-group { display: none; }
+  body[data-mode="wizard"] .setting-group.current { display: flex; }
+  body[data-mode="wizard"] .step-chrome { display: flex; }
+  body[data-mode="wizard"] .progress-bar { display: block; }
+  body[data-mode="wizard"] .wizard-nav { display: flex; }
+  body[data-mode="wizard"] .sticky-submit { display: none; }
+
+  body[data-mode="full"] .setting-group { display: flex; }
+  body[data-mode="full"] .step-chrome { display: none; }
+  body[data-mode="full"] .progress-bar { display: none; }
+  body[data-mode="full"] .wizard-nav { display: none; }
+  body[data-mode="full"] .sticky-submit { display: block; }
+
+  /* プレビュー画面 */
+  .preview-chrome {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 18px; border-bottom: 1.5px solid var(--ink); background: var(--paper);
+    position: sticky; top: 0; z-index: 2;
+  }
+  .preview-count { font-size: 11px; color: var(--muted); }
+  .btn-print {
+    background: var(--ink); color: #fff; border: none; border-radius: 10px;
+    padding: 10px 18px; font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+
+  .sheet-wrap { background: #e9e7e2; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .set-divider { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #666; }
+  .set-divider .line { flex: 1; height: 0; border-top: 1.5px dashed #999; }
+  .set-divider .tag { border: 1px solid #999; border-radius: 20px; padding: 2px 10px; background: var(--paper); }
+  .set-divider .tag.answer-tag { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  .sheet {
+    background: var(--paper); border: 1.5px solid var(--ink); padding: 16px 16px 20px;
+    font-family: 'Kiwi Maru', 'Hiragino Kaku Gothic ProN', serif;
+  }
+  .sheet-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 2px solid var(--ink); padding-bottom: 5px;
+  }
+  .sheet-title { font-size: 14px; font-weight: 500; }
+  .sheet-sub { font-size: 10px; margin-top: 3px; color: #333; }
+  .sheet-head-right { text-align: right; font-size: 9.5px; line-height: 1.9; white-space: nowrap; }
+  .sheet-time-row {
+    display: flex; gap: 16px; font-size: 9.5px; margin-top: 4px;
+    padding-bottom: 4px; border-bottom: 1px solid var(--ink);
+  }
+  .sheet-problems { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+  .problem { font-size: 12px; break-inside: avoid; }
+  .problem-line { display: flex; align-items: baseline; gap: 8px; }
+  .story { line-height: 1.7; }
+  .qnum {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border: 1px solid var(--ink); border-radius: 50%;
+    font-size: 8.5px; flex: none; position: relative; top: 1px;
+  }
+  .work-space { border: 1px dashed var(--line); border-radius: 6px; min-height: 96px; margin: 6px 0 0 24px; position: relative; }
+  .work-label { position: absolute; top: 3px; left: 6px; font-size: 9px; color: var(--muted); }
+  .ans-blank { margin: 7px 0 0 24px; font-size: 12px; }
+  .ans-blank .blank { border-bottom: 1px solid var(--ink); display: inline-block; min-width: 110px; }
+  .sheet-page-num { text-align: center; font-size: 8px; color: #666; margin-top: 10px; }
+  .stamp-row {
+    text-align: center; font-size: 10.5px; color: #555; margin-top: 8px;
+    letter-spacing: 1px;
+  }
+  .stamp-row .stars { font-size: 15px; letter-spacing: 4px; margin-left: 4px; }
+
+  .sheet-answers { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .answer-item { font-size: 11px; display: flex; align-items: baseline; gap: 6px; break-inside: avoid; }
+  .answer-item.answer-block { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .answer-line { display: flex; align-items: baseline; gap: 6px; }
+  .answer-work { font-size: 9.5px; color: #555; margin-left: 22px; line-height: 1.6; }
+
+  .fraction { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1; margin: 0 2px; }
+  .fraction .bar { width: 100%; height: 2px; background: currentColor; margin: 1px 0; }
+
+  @media (max-width: 480px) {
+    .hero-title { font-size: 22px; }
+  }
+
+  @media print {
+    @page { size: A4; margin: 12mm; }
+    html, body { background: #fff; }
+    /* iPhone/Safari で背景色を飛ばさない */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .screen { display: none !important; }
+    #screen-preview { display: block !important; }
+    .preview-chrome, .set-divider { display: none !important; }
+    /* A4の幅をいっぱいに使う */
+    .container { max-width: none; margin: 0; width: 100%; }
+    .sheet-wrap { background: #fff; padding: 0; gap: 0; display: block; }
+    .sheet { border: none; padding: 0; page-break-after: always; }
+    .sheet:last-child { page-break-after: avoid; }
+
+    /* 紙に印刷したとき、小4・5年生が読み書きしやすい大きさに拡大 */
+    .sheet-title { font-size: 18px; }
+    .sheet-sub { font-size: 12px; }
+    .sheet-head-right { font-size: 12px; line-height: 2; }
+    .sheet-time-row { font-size: 12px; gap: 24px; margin-top: 6px; padding-bottom: 6px; }
+    .sheet-problems { gap: 18px; margin-top: 16px; }
+    .problem { font-size: 15px; }
+    .story { line-height: 1.8; }
+    .qnum { width: 20px; height: 20px; font-size: 11px; }
+    .work-space { min-height: 110px; margin-left: 28px; }
+    .work-label { font-size: 11px; }
+    .ans-blank { font-size: 15px; margin-left: 28px; }
+    .ans-blank .blank { min-width: 150px; }
+    .sheet-answers { gap: 12px; margin-top: 14px; }
+    .answer-item { font-size: 14px; }
+    .answer-line { gap: 8px; }
+    .answer-work { font-size: 12px; margin-left: 28px; line-height: 1.7; }
+    .stamp-row { font-size: 13px; margin-top: 12px; }
+    .stamp-row .stars { font-size: 19px; }
+    .sheet-page-num { font-size: 10px; margin-top: 12px; }
+  }
+</style>
+</head>
+<body data-mode="full">
+<div class="container">
+
+  <!-- 設定画面 -->
+  <div id="screen-setup" class="screen active">
+    <div class="topbar">
+      <span class="topbar-title">文章題ドリル</span>
+      <span class="topbar-sub">画面1 / 設定</span>
+    </div>
+    <div class="hero">
+      <div class="hero-title">文章題ドリル</div>
+      <div class="hero-sub">開智対策（新5年）の文章題を、A4プリントにして紙で練習しよう</div>
+    </div>
+
+    <div class="step-chrome">
+      <span class="step-item"><span class="step-circle" data-step="1">1</span><span class="step-label" data-step="1">レベルと数</span></span>
+      <span class="step-item"><span class="step-circle" data-step="2">2</span><span class="step-label" data-step="2">しゅるい</span></span>
+      <span class="step-item"><span class="step-circle" data-step="3">3</span><span class="step-label" data-step="3">印刷の設定</span></span>
+    </div>
+    <div class="progress-bar"><div class="progress-bar-fill" id="progress-fill"></div></div>
+
+    <div class="settings">
+
+      <div class="setting-group current" data-step="1">
+        <div>
+          <div class="field-label">れんしゅうレベル</div>
+          <div class="segmented">
+            <button class="level-btn" data-level="1" onclick="setLevel(1)">🌱やさしい</button>
+            <button class="level-btn" data-level="2" onclick="setLevel(2)">🌟ふつう</button>
+            <button class="level-btn" data-level="3" onclick="setLevel(3)">🔥かこもん型</button>
+          </div>
+          <div class="toggle-desc" id="level-hint" style="margin-top:7px;"></div>
+        </div>
+        <div>
+          <div class="field-label">問題数</div>
+          <div class="segmented">
+            <button class="count-btn" data-count="10" onclick="setCount(10)">10</button>
+            <button class="count-btn" data-count="15" onclick="setCount(15)">15</button>
+            <button class="count-btn" data-count="20" onclick="setCount(20)">20</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="setting-group" data-step="2">
+        <div>
+          <div class="field-label">
+            <span>文章題のしゅるい（複数えらべる） <span id="type-count" style="color:#aaa;"></span></span>
+            <span style="display:flex;gap:8px;">
+              <button class="pill-btn" onclick="selectAllTypes()">全選択</button>
+              <button class="pill-btn muted" onclick="deselectAllTypes()">全解除</button>
+            </span>
+          </div>
+          <div class="unit-panel" id="type-list"></div>
+          <div class="toggle-desc" style="margin-top:7px;">選んだしゅるいから、毎回ちがう数字で出題します。</div>
+        </div>
+      </div>
+
+      <div class="setting-group" data-step="3">
+        <div>
+          <div class="field-label">プリントに入れるもの</div>
+          <div class="unit-panel">
+            <div class="check-row" onclick="toggleNameDate()">
+              <span class="check-text" style="flex:1;">名前欄・日付欄</span>
+              <span class="switch" id="namedate-switch"><span class="switch-knob"></span></span>
+            </div>
+            <div class="check-row" onclick="toggleTime()">
+              <span style="flex:1;"><span class="check-text">目標／実測タイム欄</span><br><span class="toggle-desc">もくひょう ◯分・かかった時間</span></span>
+              <span class="switch" id="time-switch"><span class="switch-knob"></span></span>
+            </div>
+            <div class="check-row" onclick="toggleWork()">
+              <span style="flex:1;"><span class="check-text">式を書くスペース</span><br><span class="toggle-desc">問題の下に、しきを書くあきをつくる</span></span>
+              <span class="switch" id="work-switch"><span class="switch-knob"></span></span>
+            </div>
+            <div class="check-row" onclick="toggleStamp()">
+              <span style="flex:1;"><span class="check-text">がんばったねスタンプ欄</span><br><span class="toggle-desc">できたら色をぬる、ごほうび欄</span></span>
+              <span class="switch" id="stamp-switch"><span class="switch-knob"></span></span>
+            </div>
+            <div class="check-row" onclick="toggleExplain()">
+              <span style="flex:1;"><span class="check-text">こたえに式・考え方をつける</span><br><span class="toggle-desc">こたえの下に、解き方の式をのせる</span></span>
+              <span class="switch" id="explain-switch"><span class="switch-knob"></span></span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="field-label">解答</div>
+          <div class="answer-select">
+            <button class="answer-btn" data-answer="none" onclick="setAnswerMode('none')">解答なし</button>
+            <button class="answer-btn" data-answer="with" onclick="setAnswerMode('with')">最終ページに追加</button>
+          </div>
+        </div>
+        <div class="stepper-row">
+          <span><span class="check-text">作成枚数</span><br><span class="toggle-desc">同じ条件で何日分つくる？</span></span>
+          <span class="stepper">
+            <button onclick="changeSets(-1)">－</button>
+            <span class="stepper-val" id="sets-val">3</span>
+            <button onclick="changeSets(1)">＋</button>
+          </span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="wizard-nav">
+      <button class="btn-back" id="btn-back" onclick="goStep(-1)">← もどる</button>
+      <button class="btn-next" id="btn-next" onclick="goStep(1)">つぎへ →</button>
+    </div>
+
+    <div class="sticky-submit">
+      <button onclick="goToPreview()">プリントを作成する →</button>
+    </div>
+  </div>
+
+  <!-- プレビュー／印刷画面 -->
+  <div id="screen-preview" class="screen">
+    <div class="preview-chrome">
+      <button class="link-btn" onclick="backToSetup()">← 設定に戻る</button>
+      <span class="preview-count" id="preview-count"></span>
+      <button class="btn-print" onclick="startPrint()">印刷する</button>
+    </div>
+    <div class="sheet-wrap" id="sheet-wrap"></div>
+  </div>
+
+</div>
+
+<script>
+// ==================== ユーティリティ ====================
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+function gcdAll(arr) { return arr.reduce((a, b) => gcd(a, b)); }
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = rand(0, i); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function pick(arr) { return arr[rand(0, arr.length - 1)]; }
+function fracHtml(n, d) { return `<span class="fraction"><span class="num">${n}</span><span class="bar"></span><span class="den">${d}</span></span>`; }
+function retry(fn) { for (let i = 0; i < 800; i++) { const r = fn(); if (r) return r; } return { story: '（問題を作れませんでした）', answer: '－', work: '', blanks: 1 }; }
+
+// ---- 小数（浮動小数点の誤差を避け、{ n: 整数, s: 小数点以下のけた数 } で扱う） ----
+function decStr(n, s) {
+  if (s <= 0) return String(n * Math.pow(10, -s));
+  const neg = n < 0;
+  const a = String(Math.abs(n)).padStart(s + 1, '0');
+  const i = a.slice(0, -s), f = a.slice(-s).replace(/0+$/, '');
+  return (neg ? '-' : '') + i + (f ? '.' + f : '');
+}
+function dec(n, s) { return { n, s }; }
+function dAlign(a, b) { const s = Math.max(a.s, b.s); return [a.n * Math.pow(10, s - a.s), b.n * Math.pow(10, s - b.s), s]; }
+function dAdd(a, b) { const [x, y, s] = dAlign(a, b); return dec(x + y, s); }
+function dSub(a, b) { const [x, y, s] = dAlign(a, b); return dec(x - y, s); }
+function dMul(a, b) { return dec(a.n * b.n, a.s + b.s); }
+function dStr(d) { return decStr(d.n, d.s); }
+// s>0 のとき末尾が0にならない整数を選ぶ（例: s=1 で 1.0、s=2 で 1.50 を避ける）
+function randRaw(min, max, s) { let r; do { r = rand(min, max); } while (s > 0 && r % 10 === 0); return r; }
+function rDec(min, max, s) { return dec(randRaw(min, max, s), s); }
+
+// ==================== 文章題の生成（B1〜B4） ====================
+
+// ---- B1 わり算の逆算（文章） ----
+// 「わられる数＝わる数×商＋あまり」を文章で問う。L1/L2＝整数、L3＝過去問型の小数逆算
+const B1_ITEMS = [
+  { name: 'あめ', unit: 'こ' }, { name: 'いちご', unit: 'こ' }, { name: 'シール', unit: 'まい' },
+  { name: 'おはじき', unit: 'こ' }, { name: 'カード', unit: 'まい' }, { name: 'クッキー', unit: 'まい' },
+];
+function makeB1(level) {
+  return retry(() => {
+    const it = pick(B1_ITEMS);
+    if (level <= 2) {
+      const people = level === 1 ? rand(3, 6) : rand(4, 9);
+      const per = level === 1 ? rand(2, 6) : rand(3, 9);
+      const rem = rand(1, people - 1); // あまり < わる数（人数）
+      const total = people * per + rem;
+      if (Math.random() < 0.5) {
+        return {
+          story: `${it.name}を ${people}人に 同じ数ずつ分けると、1人分は ${per}${it.unit}で、${rem}${it.unit}あまりました。${it.name}は ぜんぶで何${it.unit}ありますか。`,
+          answer: `${total}${it.unit}`,
+          work: `わられる数 ＝ わる数 × 商 ＋ あまり<br>${people} × ${per} ＋ ${rem} ＝ ${total}`, blanks: 1,
+        };
+      }
+      return {
+        story: `${it.name}が ${total}${it.unit}あります。同じ数ずつ分けると、1人分が ${per}${it.unit}で、${rem}${it.unit}あまりました。何人で分けましたか。`,
+        answer: `${people}人`,
+        work: `わる数 ＝ (わられる数 － あまり) ÷ 商<br>(${total} － ${rem}) ÷ ${per} ＝ ${people}`, blanks: 1,
+      };
+    }
+    // L3: ある数□で A をわると、商 Q・あまり R（過去問2と同じ形）。□＝(A－R)÷Q
+    const box = rDec(11, 49, 1);              // □（わる数）1.1〜4.9
+    const q = rDec(11, 49, 1);                // 商 1.1〜4.9
+    const R = rDec(1, box.n * 10 - 1, 2);     // あまり（< □ の値）小数第2位
+    const A = dAdd(dMul(box, q), R);
+    if (dSub(box, R).n <= 0) return null;
+    return {
+      story: `ある数 □ で ${dStr(A)} をわると、商が ${dStr(q)} で、あまりが ${dStr(R)} になりました。□ にあてはまる数をもとめなさい。`,
+      answer: `${dStr(box)}`,
+      work: `□ ＝ (わられる数 － あまり) ÷ 商<br>(${dStr(A)} － ${dStr(R)}) ÷ ${dStr(q)} ＝ ${dStr(box)}`, blanks: 1,
+    };
+  });
+}
+
+// ---- B2 差から単位量を出す（容器＋中身） ----
+// kg は 1/100（整数H）、L は 1/10（整数T）で扱い、答えが2けたの小数以内になるものだけ採用
+const B2_PAIRS = [
+  { c: 'あぶら', v: 'びん' }, { c: '水', v: 'ポット' }, { c: 'ジュース', v: '入れもの' }, { c: 'お茶', v: 'やかん' },
+];
+function makeB2(level) {
+  return retry(() => {
+    const p = pick(B2_PAIRS);
+    let unitH, V1t, ut, contH;
+    if (level === 1) { unitH = rand(11, 50) * 10; V1t = rand(2, 5) * 10; ut = rand(1, V1t / 10 - 1) * 10; contH = rand(3, 15) * 10; }
+    else if (level === 2) { unitH = rand(60, 350); V1t = rand(2, 5) * 10; ut = rand(5, V1t - 5); contH = rand(30, 200); }
+    else { unitH = rand(55, 195); V1t = rand(2, 3) * 10; ut = randRaw(5, 19, 1); contH = rand(40, 95); } // L3は小数のリットル（整数Lを避ける）
+    if (ut <= 0 || ut >= V1t) return null;
+    if ((unitH * V1t) % 10 !== 0 || (unitH * ut) % 10 !== 0) return null; // 答えが2けた小数以内
+    const W1H = contH + unitH * V1t / 10;        // 全体の重さ（はじめ）
+    const W2H = contH + unitH * (V1t - ut) / 10; // つかった後の重さ
+    if (W2H <= 0) return null;
+    const diffH = W1H - W2H;
+    return {
+      story: `${p.c}が ${decStr(V1t, 1)}L 入った${p.v}の 重さをはかると ${decStr(W1H, 2)}kg でした。${p.c}を ${decStr(ut, 1)}L つかうと、重さは ${decStr(W2H, 2)}kg になりました。(1) ${p.c}1L の重さは何kgですか。(2) ${p.v}だけの重さは何kgですか。`,
+      answer: `(1) ${decStr(unitH, 2)}kg　(2) ${decStr(contH, 2)}kg`,
+      work: `つかった ${decStr(ut, 1)}L で、重さは ${decStr(W1H, 2)} － ${decStr(W2H, 2)} ＝ ${decStr(diffH, 2)}kg へった<br>(1) 1Lの重さ ＝ ${decStr(diffH, 2)} ÷ ${decStr(ut, 1)} ＝ ${decStr(unitH, 2)}kg<br>(2) ${p.v} ＝ ${decStr(W1H, 2)} － ${decStr(unitH, 2)} × ${decStr(V1t, 1)} ＝ ${decStr(contH, 2)}kg`,
+      blanks: 2,
+    };
+  });
+}
+
+// ---- B3 あまりと公約数 ----
+// 人数Pを決め、各品の (個数－あまり) が P の倍数・あまり<P になるよう作る。
+// あまりの最大値より大きい公約数が P だけになる（＝答えが一意）よう制約する。
+const B3_ITEMS = [
+  { n: 'えんぴつ', u: '本' }, { n: 'けしゴム', u: 'こ' }, { n: 'ノート', u: 'さつ' },
+  { n: 'あめ', u: 'こ' }, { n: 'シール', u: 'まい' }, { n: 'みかん', u: 'こ' }, { n: 'おはじき', u: 'こ' },
+];
+function smallestPrime(n) { for (let p = 2; p * p <= n; p++) if (n % p === 0) return p; return n; }
+function makeB3(level) {
+  return retry(() => {
+    const P = level === 1 ? rand(3, 6) : level === 2 ? rand(4, 9) : rand(6, 12);
+    const dmax = P / smallestPrime(P);          // P の最大の真の約数（素数なら1）
+    if (dmax > P - 1) return null;
+    const maxRem = rand(dmax, P - 1);           // あまりの最大値（dmax 以上にして dmax を除外）
+    const rems = shuffle([maxRem, rand(0, maxRem), rand(0, maxRem)]);
+    let ks = null;
+    for (let t = 0; t < 60; t++) {
+      const cand = rems.map(() => level === 1 ? rand(2, 6) : level === 2 ? rand(3, 9) : rand(4, 12));
+      if (gcdAll(cand) === 1) { ks = cand; break; } // 公約数が P ちょうどになる
+    }
+    if (!ks) return null;
+    const items = shuffle(B3_ITEMS).slice(0, 3);
+    const counts = rems.map((r, i) => P * ks[i] + r);
+    if (new Set(counts).size < 3) return null;  // 個数が重ならないように
+    const parts = items.map((it, i) => `${it.n} ${counts[i]}${it.u}`);
+    const remDesc = items.map((it, i) => rems[i] === 0 ? `${it.n}は ちょうど分けられ` : `${it.n}は ${rems[i]}${it.u}あまり`);
+    const adj = items.map((it, i) => `${counts[i]}－${rems[i]}＝${counts[i] - rems[i]}`);
+    return {
+      story: `${parts.join('、')} を、何人かの子どもに 同じ数ずつ分けます。すると、${remDesc.join('、')}ました。何人で分けましたか。`,
+      answer: `${P}人`,
+      work: `あまりをひいた数：${adj.join('、')}<br>これらの公約数のうち、あまりでいちばん大きい ${maxRem} より大きい数をさがす → ${P}人`,
+      blanks: 1,
+    };
+  });
+}
+
+// ---- B4 小数の1あたり（かけ算・わり算） ----
+const B4_SCN = [
+  { tot: 'ジュース', amt: 'L', cnt: '人', per: '1人分' },
+  { tot: 'リボン', amt: 'm', cnt: '本', per: '1本分' },
+  { tot: 'すな', amt: 'kg', cnt: 'ふくろ', per: '1ふくろ分' },
+  { tot: '水', amt: 'L', cnt: 'コップ', per: 'コップ1ぱい分' },
+];
+function makeB4(level) {
+  return retry(() => {
+    const s = pick(B4_SCN);
+    let V, N;
+    if (level === 1) { V = rDec(11, 99, 1); N = rand(2, 6); }
+    else if (level === 2) { V = rDec(11, 99, 1); N = rand(3, 9); }
+    else { V = rDec(105, 995, 2); N = rand(3, 8); }
+    const tot = dMul(V, dec(N, 0));
+    if (Math.random() < 0.5) {
+      return {
+        story: `${s.tot}が ${dStr(tot)}${s.amt}あります。${N}${s.cnt}に 同じ量ずつ分けると、${s.per}は何${s.amt}ですか。`,
+        answer: `${dStr(V)}${s.amt}`,
+        work: `${s.per} ＝ ぜんぶ ÷ ${s.cnt}の数<br>${dStr(tot)} ÷ ${N} ＝ ${dStr(V)}`, blanks: 1,
+      };
+    }
+    return {
+      story: `${s.per}が ${dStr(V)}${s.amt}の ${s.tot}を、${N}${s.cnt}ぶん用意します。${s.tot}は ぜんぶで何${s.amt}いりますか。`,
+      answer: `${dStr(tot)}${s.amt}`,
+      work: `ぜんぶ ＝ ${s.per} × ${s.cnt}の数<br>${dStr(V)} × ${N} ＝ ${dStr(tot)}`, blanks: 1,
+    };
+  });
+}
+
+// ==================== しゅるい定義 ====================
+const TYPE_DEFS = [
+  { key: 'B1', label: 'わり算の逆算（文章）', sub: '□×商＋あまり で元の数をもとめる', gen: makeB1 },
+  { key: 'B2', label: '差から1あたりを出す', sub: '容器＋中身の重さから1Lの重さと容器の重さ', gen: makeB2 },
+  { key: 'B3', label: 'あまりと公約数', sub: '何人に分けたかを公約数でもとめる', gen: makeB3 },
+  { key: 'B4', label: '小数の1あたり（かけ算・わり算）', sub: '何が1あたりかを決めて計算する', gen: makeB4 },
+];
+function typeDef(key) { return TYPE_DEFS.find(t => t.key === key); }
+
+const LEVEL_LABELS = { 1: '🌱やさしい', 2: '🌟ふつう', 3: '🔥かこもん型' };
+const LEVEL_HINTS = {
+  1: '整数の文章題から。式を書くことに なれよう。',
+  2: '小数もまざります。何が1あたりかを考えよう。',
+  3: '開智の過去問と同じくらいの むずかしさ。',
+};
+
+// ==================== 状態 ====================
+let state = {
+  types: new Set(['B1', 'B2', 'B3', 'B4']),
+  level: 2,
+  count: 15,
+  showNameDate: true,
+  showTime: true,
+  showWork: true,
+  showStamp: true,
+  showExplain: true,
+  answerMode: 'with',
+  sets: 3,
+  step: 1,
+};
+let generatedSets = [];
+
+// ==================== 操作ハンドラ ====================
+function toggleType(key) {
+  if (state.types.has(key)) state.types.delete(key); else state.types.add(key);
+  renderTypeCheckboxes(); renderAll(); saveSettings();
+}
+function selectAllTypes() { TYPE_DEFS.forEach(t => state.types.add(t.key)); renderTypeCheckboxes(); renderAll(); saveSettings(); }
+function deselectAllTypes() { state.types.clear(); renderTypeCheckboxes(); renderAll(); saveSettings(); }
+function setLevel(n) { state.level = n; renderAll(); saveSettings(); }
+function setCount(n) { state.count = n; renderAll(); saveSettings(); }
+function toggleNameDate() { state.showNameDate = !state.showNameDate; renderAll(); saveSettings(); }
+function toggleTime() { state.showTime = !state.showTime; renderAll(); saveSettings(); }
+function toggleWork() { state.showWork = !state.showWork; renderAll(); saveSettings(); }
+function toggleStamp() { state.showStamp = !state.showStamp; renderAll(); saveSettings(); }
+function toggleExplain() { state.showExplain = !state.showExplain; renderAll(); saveSettings(); }
+function setAnswerMode(mode) { state.answerMode = mode; renderAll(); saveSettings(); }
+function changeSets(delta) { state.sets = Math.min(5, Math.max(1, state.sets + delta)); renderAll(); saveSettings(); }
+
+// ==================== 設定画面レンダリング ====================
+function renderTypeCheckboxes() {
+  const wrap = document.getElementById('type-list');
+  wrap.innerHTML = TYPE_DEFS.map(t => {
+    const checked = state.types.has(t.key);
+    return `<div class="check-row" onclick="toggleType('${t.key}')">
+      <span class="checkbox ${checked ? 'checked' : ''}">${checked ? '✓' : ''}</span>
+      <span style="flex:1;"><span class="check-text">${t.label}</span><br><span class="check-sub">${t.sub}</span></span>
+    </div>`;
+  }).join('');
+  document.getElementById('type-count').textContent = `${state.types.size}つ選択中`;
+}
+function renderAll() {
+  document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('selected', Number(b.dataset.level) === state.level));
+  document.getElementById('level-hint').textContent = LEVEL_HINTS[state.level];
+  document.querySelectorAll('.count-btn').forEach(b => b.classList.toggle('selected', Number(b.dataset.count) === state.count));
+  setSwitch('namedate-switch', state.showNameDate);
+  setSwitch('time-switch', state.showTime);
+  setSwitch('work-switch', state.showWork);
+  setSwitch('stamp-switch', state.showStamp);
+  setSwitch('explain-switch', state.showExplain);
+  document.querySelectorAll('.answer-btn').forEach(b => b.classList.toggle('selected', b.dataset.answer === state.answerMode));
+  document.getElementById('sets-val').textContent = state.sets;
+}
+function setSwitch(id, on) { document.getElementById(id).classList.toggle('on', on); }
+
+// ==================== レスポンシブ（ウィザード⇔1枚） ====================
+const mq = window.matchMedia('(min-width: 768px)');
+function applyResponsiveMode() {
+  document.body.dataset.mode = mq.matches ? 'full' : 'wizard';
+  if (!mq.matches) state.step = 1;
+  renderStepChrome();
+}
+mq.addEventListener('change', applyResponsiveMode);
+function renderStepChrome() {
+  for (let i = 1; i <= 3; i++) {
+    document.querySelector(`.setting-group[data-step="${i}"]`).classList.toggle('current', i === state.step);
+    const circle = document.querySelector(`.step-circle[data-step="${i}"]`);
+    const label = document.querySelector(`.step-label[data-step="${i}"]`);
+    circle.classList.toggle('active', i === state.step);
+    circle.classList.toggle('done', i < state.step);
+    circle.textContent = i < state.step ? '✓' : String(i);
+    label.classList.toggle('active', i === state.step);
+  }
+  document.getElementById('progress-fill').style.width = `${(state.step / 3) * 100}%`;
+  document.getElementById('btn-back').style.visibility = state.step > 1 ? 'visible' : 'hidden';
+  document.getElementById('btn-next').textContent = state.step < 3 ? 'つぎへ →' : 'プリントを作成する →';
+}
+function goStep(delta) {
+  if (state.step === 3 && delta > 0) { goToPreview(); return; }
+  state.step = Math.min(3, Math.max(1, state.step + delta));
+  renderStepChrome();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ==================== 印刷データ生成 ====================
+function generateProblems(count) {
+  const pool = state.types.size ? Array.from(state.types) : ['B1'];
+  const problems = [];
+  for (let i = 0; i < count; i++) {
+    const key = pool[rand(0, pool.length - 1)];
+    problems.push(typeDef(key).gen(state.level));
+  }
+  return problems;
+}
+function buildSheets() {
+  generatedSets = [];
+  for (let s = 1; s <= state.sets; s++) generatedSets.push({ problems: generateProblems(state.count) });
+}
+
+// ==================== プレビューHTML構築 ====================
+function circleTag(n) { return `<span class="qnum">${n}</span>`; }
+function gradeLabel() { return '開智対策（新5年）'; }
+function unitTitleForSet() {
+  const types = Array.from(state.types);
+  if (types.length === 0) return '文章題';
+  if (types.length > 1) return `文章題 ミックス（${types.length}しゅるい）`;
+  return typeDef(types[0]).label;
+}
+function renderNameDateBlock() {
+  return state.showNameDate
+    ? `<div class="sheet-head-right"><div>なまえ　＿＿＿＿＿＿＿＿</div><div>日づけ　＿＿月＿＿日</div></div>` : '';
+}
+function renderTimeRow() {
+  return state.showTime
+    ? `<div class="sheet-time-row"><span>もくひょう　＿＿分</span><span>かかった時間　＿＿分＿＿秒</span></div>` : '';
+}
+function renderStampBox() {
+  return state.showStamp
+    ? `<div class="stamp-row">がんばったね！できたら色をぬろう<span class="stars">☆ ☆ ☆</span></div>` : '';
+}
+function ansBlanks(n) {
+  if (n >= 2) return `<div class="ans-blank">(1) 答え <span class="blank"></span>　(2) 答え <span class="blank"></span></div>`;
+  return `<div class="ans-blank">答え <span class="blank"></span></div>`;
+}
+function buildProblemSheetHtml(setIndex, problems, pageNo, totalPages) {
+  return `<div class="sheet">
+    <div class="sheet-head">
+      <div><div class="sheet-title">${unitTitleForSet()}</div><div class="sheet-sub">${gradeLabel()} ／ ${setIndex}日目 ／ ${LEVEL_LABELS[state.level]}</div></div>
+      ${renderNameDateBlock()}
+    </div>
+    ${renderTimeRow()}
+    <div class="sheet-problems">
+      ${problems.map((p, i) => {
+        const line = `<div class="problem-line">${circleTag(i + 1)}<span class="story">${p.story}</span></div>`;
+        const work = state.showWork ? `<div class="work-space"><span class="work-label">しき</span></div>` : '';
+        return `<div class="problem">${line}${work}${ansBlanks(p.blanks)}</div>`;
+      }).join('')}
+    </div>
+    ${renderStampBox()}
+    <div class="sheet-page-num">— ${pageNo} / ${totalPages} —</div>
+  </div>`;
+}
+function buildAnswerHtml(setIndex, problems) {
+  const showWork = state.showExplain;
+  return `<div class="sheet">
+    <div class="sheet-head"><div class="sheet-title">こたえ（${setIndex}日目）</div></div>
+    <div class="sheet-answers">
+      ${problems.map((p, i) => {
+        if (!showWork) return `<div class="answer-item">${circleTag(i + 1)}<span>${p.answer}</span></div>`;
+        const workHtml = p.work ? `<div class="answer-work">${p.work}</div>` : '';
+        return `<div class="answer-item answer-block"><div class="answer-line">${circleTag(i + 1)}<span>${p.answer}</span></div>${workHtml}</div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+function renderPreview() {
+  const totalPages = state.sets + (state.answerMode === 'with' ? state.sets : 0);
+  let html = '';
+  generatedSets.forEach((set, idx) => {
+    const setIndex = idx + 1;
+    if (setIndex > 1) html += `<div class="set-divider"><span class="line"></span><span class="tag">セット${setIndex}（${setIndex}日目）</span><span class="line"></span></div>`;
+    html += buildProblemSheetHtml(setIndex, set.problems, setIndex, totalPages);
+  });
+  if (state.answerMode === 'with') {
+    html += `<div class="set-divider"><span class="line"></span><span class="tag answer-tag">こたえ</span><span class="line"></span></div>`;
+    generatedSets.forEach((set, idx) => { html += buildAnswerHtml(idx + 1, set.problems); });
+  }
+  document.getElementById('sheet-wrap').innerHTML = html;
+  document.getElementById('preview-count').textContent =
+    `全${totalPages}ページ（${state.sets}セット${state.answerMode === 'with' ? '＋こたえ' : ''}）`;
+}
+
+// ==================== 画面遷移 ====================
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  window.scrollTo(0, 0);
+}
+function goToPreview() {
+  if (state.types.size === 0) { alert('文章題のしゅるいを1つ以上えらんでください'); return; }
+  buildSheets();
+  renderPreview();
+  showScreen('preview');
+}
+function backToSetup() { showScreen('setup'); }
+function startPrint() { window.print(); }
+
+// ==================== 設定の保存・復元 ====================
+const SETTINGS_KEY = 'word_print_settings';
+function saveSettings() {
+  const toSave = {
+    types: Array.from(state.types), level: state.level, count: state.count,
+    showNameDate: state.showNameDate, showTime: state.showTime, showWork: state.showWork,
+    showStamp: state.showStamp, showExplain: state.showExplain, answerMode: state.answerMode, sets: state.sets,
+  };
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(toSave)); } catch (e) {}
+}
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    const validKeys = TYPE_DEFS.map(t => t.key);
+    const types = Array.isArray(saved.types) ? saved.types.filter(k => validKeys.includes(k)) : [];
+    state.types = new Set(types.length ? types : validKeys);
+    state.level = [1, 2, 3].includes(saved.level) ? saved.level : 2;
+    state.count = [10, 15, 20].includes(saved.count) ? saved.count : 15;
+    state.showNameDate = saved.showNameDate !== false;
+    state.showTime = saved.showTime !== false;
+    state.showWork = saved.showWork !== false;
+    state.showStamp = saved.showStamp !== false;
+    state.showExplain = saved.showExplain !== false;
+    state.answerMode = saved.answerMode === 'none' ? 'none' : 'with';
+    state.sets = Math.min(5, Math.max(1, saved.sets || 3));
+  } catch (e) {}
+}
+
+// ==================== 初期化 ====================
+(function init() {
+  loadSettings();
+  applyResponsiveMode();
+  renderTypeCheckboxes();
+  renderAll();
+})();
+</script>
+</body>
+</html>
